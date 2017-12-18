@@ -418,11 +418,13 @@
 }
 
 - (void)prepareRequest:(NSMutableURLRequest *)request {
+    if (![_headers objectForKey:@"User-Agent"]) {
 #if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
-    [request addValue:[self createUserAgentString:NSLocalizedString(@"SignalR.Client.iOS",@"")] forHTTPHeaderField:@"User-Agent"];
+        [request addValue:[self createUserAgentString:NSLocalizedString(@"SignalR.Client.iOS",@"")] forHTTPHeaderField:@"User-Agent"];
 #elif TARGET_OS_MAC
-    [request addValue:[self createUserAgentString:NSLocalizedString(@"SignalR.Client.OSX",@"")] forHTTPHeaderField:@"User-Agent"];
+        [request addValue:[self createUserAgentString:NSLocalizedString(@"SignalR.Client.OSX",@"")] forHTTPHeaderField:@"User-Agent"];
 #endif
+    }
     
     //TODO: set credentials
     //[request setCredentials:_credentials];

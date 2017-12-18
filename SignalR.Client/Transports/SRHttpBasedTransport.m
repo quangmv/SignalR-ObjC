@@ -72,6 +72,10 @@
     
     AFHTTPSessionManager *manager = [[AFHTTPSessionManager alloc] initWithBaseURL:[NSURL URLWithString:connection.url] sessionConfiguration:self.sessionConfiguration];
     [manager setResponseSerializer:[AFJSONResponseSerializer serializer]];
+    for (NSString* key in connection.headers) {
+        NSString* value = [connection.headers objectForKey:key];
+        [manager.requestSerializer setValue:value forHTTPHeaderField:key];
+    }
     //manager = self.securityPolicy;
     SRLogTransportDebug(@"will negotiate at url: %@negotiate%@", connection.url, parameters);
     [manager GET:@"negotiate" parameters:parameters success:^(NSURLSessionDataTask * _Nonnull task, id  _Nonnull responseObject) {
