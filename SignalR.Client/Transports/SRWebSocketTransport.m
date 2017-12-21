@@ -27,6 +27,8 @@
 #import "SRWebSocketConnectionInfo.h"
 #import "SRConnectionInterface.h"
 #import "SRConnectionExtensions.h"
+#import "SRBlockOperation.h"
+#import "SRTransportRequestSerialization.h"
 
 typedef void (^SRWebSocketStartBlock)(id response, NSError *error);
 
@@ -110,30 +112,18 @@ typedef void (^SRWebSocketStartBlock)(id response, NSError *error);
 }
 
 - (void)performConnect:(void (^)(id response, NSError *error))block reconnecting:(BOOL)reconnecting {
+
+    NSDictionary *parameters = @{};
+    parameters = [self addTransport:parameters transport:[self name]];
+    parameters = [self addConnectionData:parameters connectionData:[_connectionInfo data]];
     
-    id parameters = @{
-        @"transport" : [self name],
-        @"connectionToken" : ([[_connectionInfo connection] connectionToken]) ? [[_connectionInfo connection] connectionToken] :@"",
-        @"messageId" : ([[_connectionInfo connection] messageId]) ? [[_connectionInfo connection] messageId] : @"",
-        @"groupsToken" : ([[_connectionInfo connection] groupsToken]) ? [[_connectionInfo connection] groupsToken] : @"",
-        @"connectionData" : ([_connectionInfo data]) ? [_connectionInfo data] : @"",
-    };
-    
-    if ([[_connectionInfo connection] queryString]) {
-        NSMutableDictionary *_parameters = [NSMutableDictionary dictionaryWithDictionary:parameters];
-        [_parameters addEntriesFromDictionary:[[_connectionInfo connection] queryString]];
-        parameters = _parameters;
-    }
-    
-    NSMutableURLRequest *request = [[AFHTTPRequestSerializer serializer] requestWithMethod:@"GET" URLString:[_connectionInfo.connection.url stringByAppendingString:reconnecting ? @"reconnect" : @"connect"] parameters:parameters error:nil];
-    [_connectionInfo.connection prepareRequest:request]; //TODO: prepareRequest
-    
+    NSMutableURLRequest *request = [[SRWebsocketRequestSerializer serializerWithConnection:_connectionInfo.connection] requestWithMethod:@"GET" URLString:[_connectionInfo.connection.url stringByAppendingString:reconnecting ? @"reconnect" : @"connect"] parameters:parameters error:nil];
     SRLogWSDebug(@"websocket will connect at url: %@",[request.URL absoluteString]);
     
     [self setStartBlock:block];
     if (self.startBlock) {
         __weak __typeof(&*self)weakSelf = self;
-        self.connectTimeoutOperation = [NSBlockOperation blockOperationWithBlock:^{
+        self.connectTimeoutOperation = [SRTransportConnectTimeoutBlockOperation blockOperationWithBlock:^{
             __strong __typeof(&*weakSelf)strongSelf = weakSelf;
             if (strongSelf.startBlock) {
                 NSDictionary* userInfo = @{
